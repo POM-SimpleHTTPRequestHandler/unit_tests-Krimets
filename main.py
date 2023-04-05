@@ -26,16 +26,52 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         return json.loads(self.rfile.read(content_length).decode('utf-8'))  # <--- Gets the data itself
 
     def do_GET(self):
-        self._set_response(418)
+        if self.path == '/users':
+            return self._set_response(200, USERS_LIST)
+        for user in USERS_LIST:
+            if self.path == f"/user/{user['username']}":
+                return self._set_response(200, user)
+            else:
+                return self._set_response(400, {'error': 'User not found'})
 
     def do_POST(self):
-        self._set_response(418)
+        try:
+            data = self._pars_body()
+            if type(data) == dict:
+                data = [data]
+            id_data = []
+            for d in data:
+                if d['id'] in id_data or d['id'] == 1:
+                    return self._set_response(400)
+                else:
+                    id_data.append(d['id'])
+            if len(data) == 1:
+                return self._set_response(201, data[0])
+
+            return self._set_response(201, data)
+        except:
+            return self._set_response(400)
 
     def do_PUT(self):
-        self._set_response(418)
+        keywords = ['username', 'firstName', 'lastName', 'email', 'password']
+        parsing = self._pars_body()
+
+        for user in USERS_LIST:
+            if keywords == list(parsing.keys()) \
+                    and self.path == f"/user/{user['id']}":
+                parsing.update({'id': user['id']})
+                return self._set_response(200, parsing)
+            elif self.path != f"/user/{user['id']}":
+                return self._set_response(404, {'error': 'User not found'})
+            else:
+                return self._set_response(400, {'error': 'not valid request data'})
 
     def do_DELETE(self):
-        self._set_response(418)
+        for user in USERS_LIST:
+            if self.path == f"/user/{user['id']}":
+                return self._set_response(200, {})
+            else:
+                return self._set_response(404, {'error': 'User not found'})
 
 
 def run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler, host='localhost', port=8000):
